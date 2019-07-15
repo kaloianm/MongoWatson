@@ -1,0 +1,3 @@
+[submodule "svc/triage-scripts"]
+	path = svc/triage-scripts
+	url = git@github.com:10gen/triage-scripts.git

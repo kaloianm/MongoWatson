@@ -1,0 +1,9 @@
+# Operating system and development environment specific ignores
+.DS_Store
+
+# Node.js specific ignores
+node_modules/
+
+# Python specific ignores
+*.pyc
+env/
