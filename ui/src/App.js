@@ -4,26 +4,47 @@ import axios from 'axios';
 
 const axiosInstance = axios.create({ baseURL: 'http://127.0.0.1:5000/', timeout: 30000 });
 
+class StackFrames extends React.Component {
+  render() {
+    const stackFrames = this.props.stackFrames;
+
+    return (
+      <div>
+        {stackFrames.map(function (frame) {
+          if (frame.functionName)
+            return (<p><a href={frame.sourceFileUrl}>{frame.functionName}</a></p>);
+          else
+            return (<span>?? UNKNOWN ??</span>);
+        })}
+      </div>);
+  }
+}
+
 class StackInputComponent extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { value: '', resolvedStack: null };
+
+    this.state = {
+      stack: null,
+      resolvedStack: null
+    };
 
     this.handleChange = this.handleChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
   }
 
   handleChange(event) {
-    this.setState({ value: event.target.value });
+    this.setState({ stack: event.target.value });
   }
 
   handleSubmit(event) {
     const self = this;
+    const state = this.state;
 
     axiosInstance.post('/symbolizestack', {
-      stack: self.state.value,
+      stack: state.stack,
     }).then(function (response) {
-      self.setState({ resolvedStack: response.data.buildInfo });
+      self.setState({ resolvedStack: response.data });
     }).catch(function (error) {
       self.setState({ resolvedStack: error });
     });
@@ -32,31 +53,31 @@ class StackInputComponent extends React.Component {
   }
 
   render() {
+    const self = this;
     const state = this.state;
 
     return (
-      <div className="stackInput">
-        <form onSubmit={this.handleSubmit}>
+      <div>
+        <form onSubmit={self.handleSubmit}>
           <div>
             <label>
-              Name:
+              Stack:
             </label>
             <div>
-              <textarea rows={50} cols={60} value={state.value} onChange={this.handleChange} />
+              <textarea rows={28} cols={100} value={state.value} onChange={self.handleChange} />
             </div>
             <div>
               <input type="submit" value="Submit" />
             </div>
           </div>
         </form>
+
         {state.resolvedStack ? (
           <div>
             <label>
-              Resolved stack:
-          </label>
-            <div>
-              <textarea rows={50} cols={60} value={state.resolvedStack} />
-            </div>
+              Resolved stack for build version: {state.resolvedStack.buildInfo.version}
+            </label>
+            <StackFrames stackFrames={state.resolvedStack.stackFrames} />
           </div>
         ) : (<div />)}
       </div>
@@ -67,6 +88,10 @@ class StackInputComponent extends React.Component {
 function App() {
   return (
     <div className="App">
+      <script type="text/javascript" src="https://gist-it.appspot.com/assets/prettify/prettify.js"></script>
+      <link rel="stylesheet" href="https://gist-it.appspot.com/assets/embed.css" />
+      <link rel="stylesheet" href="https://gist-it.appspot.com/assets/prettify/prettify.css" />
+
       <header className="App-header">
         <p>
           <StackInputComponent id="stack" />

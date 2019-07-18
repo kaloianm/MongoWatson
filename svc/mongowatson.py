@@ -1,48 +1,50 @@
 #!python3
 
+#
 # Main entry point for the Mongo Watson web service
 #
 
 import sys
 
-from flask import Flask
-from flask import jsonify
-from flask import request
-from flask import abort
-
-from flask_cors import CORS
-
-from werkzeug.exceptions import BadRequest
-
-
 # Ensure that the caller is using python 3
 if (sys.version_info[0] < 3):
     raise Exception("Must be using Python 3")
 
+from flask import Flask, request
+from flask_cors import CORS
+
+from listbuilds import listBuildsRequestImpl
+from symbolizestack import symbolizeStackRequestImpl
+
 app = Flask(__name__)
 CORS(app)
 
-class SymbolizedStack:
-    def __init__(self, buildInfo):
-        self.buildInfo = buildInfo
-    
-    def tojson(self):
-        return jsonify(buildInfo = self.buildInfo)
 
+# Implemenst the listbuilds API
+#
+# Request parameters:
+#   - buildOS: string, one of the fixed supported operating systems for which to list the available
+#              builds
+#
+# Response: New line-separated list of JSON objects containing 'name' of the build and 'url' from
+#           where to download the symbols archive
+#
+@app.route('/listbuilds', methods=['GET'])
+def get():
+    return listBuildsRequestImpl(request)
+
+
+# Implements the symbolizestack API
+#
+# Request parameters:
+#   - stack: string
+#   - buildId: string (optional)
+#
+# Response: SymbolizeStackResponse
+#
 @app.route('/symbolizestack', methods=['POST'])
 def post():
-    print('Executing request ', request.method)
-
-    if (not request.is_json):
-        raise BadRequest('Invalid request content')
-
-    content = request.get_json()
-    print(content)
-    stack = content['stack']
-
-    symbolizedStack = SymbolizedStack('0x001212AA')
-
-    return symbolizedStack.tojson()
+    return symbolizeStackRequestImpl(request)
 
 
 if __name__ == '__main__':
