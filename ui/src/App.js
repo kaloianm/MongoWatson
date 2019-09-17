@@ -9,10 +9,16 @@ class StackFrames extends React.Component {
     const stackFrames = this.props.stackFrames;
 
     return (
-      <div>
-        {stackFrames.map(function (frame) {
-          return (<p><a href={frame.url}>{frame.fn}</a></p>);
-        })}
+      <div align='left'>
+        <table>
+          {stackFrames.map(function (frame) {
+            return (
+              <tr>
+                <a href={frame.url} target="_blank">{frame.fn}</a>
+              </tr>
+            );
+          })}
+        </table>
       </div>);
   }
 }
@@ -71,9 +77,7 @@ class StackInputComponent extends React.Component {
 
         {state.resolvedStack ? (
           <div>
-            <label>
-              Resolved stack for build version: {state.resolvedStack.buildInfo.version}
-            </label>
+            <h1>Resolved stack for build version: {state.resolvedStack.buildInfo.version}</h1>
             <StackFrames stackFrames={state.resolvedStack.stackFrames} />
           </div>
         ) : (<div />)}
