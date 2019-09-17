@@ -6,7 +6,7 @@ from flask import jsonify
 from werkzeug.exceptions import BadRequest
 
 sourcePathRegex = r'/data/mci/(?P<buildId>\w+)/src/(?P<sourcePath>[\w\W]+)'
-kGithubUrl = 'https://github.com/mongodb/mongo/tree/{}/{}#L{}'
+kGithubUrl = 'https://github.com/mongodb/mongo/blob/{}/{}#L{}'
 
 
 # Expects 'stackLine' to be json with the following fielts:
