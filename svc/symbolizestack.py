@@ -5,29 +5,67 @@ import common, json, re, symbolize
 from flask import jsonify
 from werkzeug.exceptions import BadRequest
 
-sourcePathRegex = r'/data/mci/(?P<buildId>\w+)/src/(?P<sourcePath>[\w\W]+):(?P<lineNum>\d+):(?P<colNum>\d+):\s+(?P<funcName>\S{1}[\S\s]+)'
+sourcePathRegex = r'/data/mci/(?P<buildId>\w+)/src/(?P<sourcePath>[\w\W]+)'
+kGithubUrl = 'https://github.com/mongodb/mongo/tree/{}/{}#L{}'
 
 
-def gitUrl(buildInfo, stackLine):
-    match = re.match(sourcePathRegex, stackLine)
-    if (match):
-        return {
-            'functionName':
-                match['funcName'],
-            'sourceFileUrl':
-                'https://github.com/mongodb/mongo/tree/{}/{}#L{}'.format(buildInfo['githash'],
-                                                                     match['sourcePath'],
-                                                                     match['lineNum'])
-        }
-    else:
-        return {'functionName': None}
+# Expects 'stackLine' to be json with the following fielts:
+#   {
+#       symbinfo: [ {
+#           fn: 'mongo::function()',
+#           file: '/data/mci/...',
+#           column: 0,
+#           line: 171
+#       } ]
+#   }
+#
+def gitUrl(githash, stackLine):
+    symbol_info = stackLine['symbinfo'][0]
+    match = re.match(sourcePathRegex, symbol_info['file'])
+
+    return {
+        'fn':
+            symbol_info['fn'],
+        'url':
+            kGithubUrl.format(githash, match['sourcePath'], symbol_info['line']) if match else None
+    }
 
 
 class SymbolizeStackRequest:
     def __init__(self, request):
-        self.stack = request['stack']
+        if isinstance(request['stack'], str):
+            self.stack = json.loads(request['stack'])
+        else:
+            self.stack = request['stack']
 
 
+# Object which serializes itself to json with the following content:
+#
+# {
+#  "buildInfo": {
+#    "buildId": "6cc0db94b5f0b88048bd857b35f6d91747e14577",
+#    "edition": "community",
+#    "githash": "22ec9e93b40c85fc7cae7d56e7d6a02fd811088c",
+#    "uname": {
+#      "machine": "x86_64",
+#      "release": "3.10.0-327.el7.x86_64",
+#      "sysname": "Linux",
+#      "version": "#1 SMP Thu Nov 19 22:10:57 UTC 2015"
+#    },
+#    "version": "3.2.9"
+#  },
+#  "stackFrames": [
+#    {
+#      "fn": "mongo::printStackTrace(std::ostream&)",
+#      "url": "https://github.com/mongodb/mongo/tree/22ec9e93b40c85fc7cae7d56e7d6a02fd811088c/src/mongo/util/stacktrace_posix.cpp#L171"
+#    },
+#       ....
+#    {
+#      "fn": "??",
+#      "url": null
+#    }
+#  ]
+# }
 class SymbolizeStackResponse:
     def __init__(self, buildInfo, stackFrames):
         self.buildInfo = buildInfo
@@ -38,53 +76,18 @@ class SymbolizeStackResponse:
 
 
 def symbolizeStackRequestImpl(request):
-    if isinstance(request, str):
-        ssRequest = SymbolizeStackRequest({ 'stack' : request })
-    elif request.is_json:
+    if request.is_json:
         ssRequest = SymbolizeStackRequest(request.get_json())
     else:
         raise BadRequest('Invalid request content')
 
-    build_info, symbolized_stacktrace = symbolize.symbolize_backtrace_from_logs(ssRequest.stack, json_format=True)
-
-    # FIXME: this is going to fail now.
-    # The symbolized_stacktrace will contain entries like the following:
-      # {
-      #   "path": "/Users/rf/.mongosymb.cache/c5c4d740b31991fe10d9e8b5550c9afd2d195028.debug",
-      #   "buildId": "C5C4D740B31991FE10D9E8B5550C9AFD2D195028",
-      #   "offset": "1CD6195",
-      #   "addr": 30237076,
-      #   "symbol": null,
-      #   "symbinfo": [
-      #     {
-      #       "fn": "std::function<void ()>::operator()() const",
-      #       "file": "/opt/mongodbtoolchain/v2/include/c++/5.4.0/functional",
-      #       "column": 0,
-      #       "line": 2267
-      #     },
-      #     {
-      #       "fn": "operator()",
-      #       "file": "/data/mci/7946403a5351d044e6cf13da2806ff98/src/src/mongo/transport/service_executor_synchronous.cpp",
-      #       "column": 0,
-      #       "line": 138
-      #     },
-      #     {
-      #       "fn": "std::_Function_handler<void (), mongo::transport::ServiceExecutorSynchronous::schedule(std::function<void ()>, mongo::transport::ServiceExecutor::ScheduleFlags, mongo::transport::ServiceExecutorTaskName)::'lambda'()>::_M_invoke(std::_Any_data const&)",
-      #       "file": "/opt/mongodbtoolchain/v2/include/c++/5.4.0/functional",
-      #       "column": 0,
-      #       "line": 1871
-      #     }
-      #   ]
-      # },
+    build_info, symbolized_stacktrace = symbolize.symbolize_backtrace_from_logs(
+        json.dumps(ssRequest.stack), json_format=True)
 
     ssResponse = SymbolizeStackResponse(
-        buildInfo, list(map(lambda stackFrame: gitUrl(buildInfo, stackFrame.strip()), stackFrames)))
+        build_info,
+        list(
+            map(lambda stackFrame: gitUrl(build_info['githash'], stackFrame),
+                json.loads(symbolized_stacktrace))))
 
     return ssResponse.tojson()
-
-if __name__ == '__main__':
-    # Enable testing from the command line
-    import sys
-    with open(sys.argv[1], 'r') as f:
-        logs = f.readlines()
-    symbolizeStackRequestImpl('\n'.join(logs))

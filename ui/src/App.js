@@ -11,10 +11,7 @@ class StackFrames extends React.Component {
     return (
       <div>
         {stackFrames.map(function (frame) {
-          if (frame.functionName)
-            return (<p><a href={frame.sourceFileUrl}>{frame.functionName}</a></p>);
-          else
-            return (<span>?? UNKNOWN ??</span>);
+          return (<p><a href={frame.url}>{frame.fn}</a></p>);
         })}
       </div>);
   }
