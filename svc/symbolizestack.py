@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import common, json, re, symbolize
 
 from flask import jsonify
@@ -36,50 +38,53 @@ class SymbolizeStackResponse:
 
 
 def symbolizeStackRequestImpl(request):
-    if (not request.is_json):
+    if isinstance(request, str):
+        ssRequest = SymbolizeStackRequest({ 'stack' : request })
+    elif request.is_json:
+        ssRequest = SymbolizeStackRequest(request.get_json())
+    else:
         raise BadRequest('Invalid request content')
 
-    ssRequest = SymbolizeStackRequest(request.get_json())
+    build_info, symbolized_stacktrace = symbolize.symbolize_backtrace_from_logs(ssRequest.stack, json_format=True)
 
-    buildInfo = json.loads(""" {
-        "uname": {
-            "sysname": "Linux",
-            "release": "3.10.0-327.el7.x86_64",
-            "version": "#1 SMP Thu Nov 19 22:10:57 UTC 2015",
-            "machine": "x86_64"
-        },
-        "version": "3.2.9",
-        "githash": "22ec9e93b40c85fc7cae7d56e7d6a02fd811088c",
-        "edition": "community",
-        "buildId": "6cc0db94b5f0b88048bd857b35f6d91747e14577"
-    } """)
-
-    stackFrames = """
-        /data/mci/f12ef8ea00e4c7b69c83a1a5fbe9d0f8/src/src/mongo/util/stacktrace_posix.cpp:171:0: mongo::printStackTrace(std::ostream&)
-        /data/mci/f12ef8ea00e4c7b69c83a1a5fbe9d0f8/src/src/mongo/util/signal_handlers_synchronous.cpp:180:0: mongo::(anonymous namespace)::printSignalAndBacktrace(int)
-        /data/mci/f12ef8ea00e4c7b69c83a1a5fbe9d0f8/src/src/mongo/util/signal_handlers_synchronous.cpp:276:0: mongo::(anonymous namespace)::abruptQuitWithAddrSignal(int, siginfo_t*, void*)
-        ??:0:0: ??
-        /data/mci/f12ef8ea00e4c7b69c83a1a5fbe9d0f8/src/src/third_party/gperftools-2.2/src/linked_list.h:75:0: SLL_PopRange
-        /data/mci/f12ef8ea00e4c7b69c83a1a5fbe9d0f8/src/src/third_party/gperftools-2.2/src/thread_cache.h:229:0: tcmalloc::ThreadCache::FreeList::PopRange(int, void**, void**)
-        /data/mci/f12ef8ea00e4c7b69c83a1a5fbe9d0f8/src/src/third_party/gperftools-2.2/src/thread_cache.cc:235:0: tcmalloc::ThreadCache::ReleaseToCentralCache(tcmalloc::ThreadCache::FreeList*, unsigned long, int)
-        /data/mci/f12ef8ea00e4c7b69c83a1a5fbe9d0f8/src/src/third_party/gperftools-2.2/src/thread_cache.cc:197:0: tcmalloc::ThreadCache::ListTooLong(tcmalloc::ThreadCache::FreeList*, unsigned long)
-        /data/mci/f12ef8ea00e4c7b69c83a1a5fbe9d0f8/src/src/third_party/gperftools-2.2/src/thread_cache.h:390:0: tcmalloc::ThreadCache::Deallocate(void*, unsigned long)
-        /data/mci/f12ef8ea00e4c7b69c83a1a5fbe9d0f8/src/src/third_party/gperftools-2.2/src/tcmalloc.cc:1227:0: do_free_helper
-        /data/mci/f12ef8ea00e4c7b69c83a1a5fbe9d0f8/src/src/third_party/gperftools-2.2/src/tcmalloc.cc:1257:0: do_free_with_callback
-        /data/mci/f12ef8ea00e4c7b69c83a1a5fbe9d0f8/src/src/third_party/gperftools-2.2/src/tcmalloc.cc:1266:0: do_free
-        /data/mci/f12ef8ea00e4c7b69c83a1a5fbe9d0f8/src/src/third_party/gperftools-2.2/src/tcmalloc.cc:1617:0: free
-        /data/mci/f12ef8ea00e4c7b69c83a1a5fbe9d0f8/src/src/third_party/wiredtiger/src/btree/bt_discard.c:423:0: __free_update
-        /data/mci/f12ef8ea00e4c7b69c83a1a5fbe9d0f8/src/src/third_party/wiredtiger/src/btree/bt_discard.c:221:0: __free_page_modify
-        /data/mci/f12ef8ea00e4c7b69c83a1a5fbe9d0f8/src/src/third_party/wiredtiger/src/btree/bt_discard.c:115:0: __wt_page_out
-        /data/mci/f12ef8ea00e4c7b69c83a1a5fbe9d0f8/src/src/third_party/wiredtiger/src/evict/evict_page.c:276:0: __evict_page_dirty_update
-        /data/mci/f12ef8ea00e4c7b69c83a1a5fbe9d0f8/src/src/third_party/wiredtiger/src/evict/evict_page.c:124:0: __wt_evict
-        /data/mci/f12ef8ea00e4c7b69c83a1a5fbe9d0f8/src/src/third_party/wiredtiger/src/evict/evict_lru.c:1665:0: __evict_page
-        /data/mci/f12ef8ea00e4c7b69c83a1a5fbe9d0f8/src/src/third_party/wiredtiger/src/evict/evict_lru.c:916:0: __evict_lru_pages
-        /data/mci/f12ef8ea00e4c7b69c83a1a5fbe9d0f8/src/src/third_party/wiredtiger/src/evict/evict_lru.c:507:0: __evict_helper
-        /data/mci/f12ef8ea00e4c7b69c83a1a5fbe9d0f8/src/src/third_party/wiredtiger/src/evict/evict_lru.c:220:0: __evict_thread_run
-    """.strip().splitlines()
+    # FIXME: this is going to fail now.
+    # The symbolized_stacktrace will contain entries like the following:
+      # {
+      #   "path": "/Users/rf/.mongosymb.cache/c5c4d740b31991fe10d9e8b5550c9afd2d195028.debug",
+      #   "buildId": "C5C4D740B31991FE10D9E8B5550C9AFD2D195028",
+      #   "offset": "1CD6195",
+      #   "addr": 30237076,
+      #   "symbol": null,
+      #   "symbinfo": [
+      #     {
+      #       "fn": "std::function<void ()>::operator()() const",
+      #       "file": "/opt/mongodbtoolchain/v2/include/c++/5.4.0/functional",
+      #       "column": 0,
+      #       "line": 2267
+      #     },
+      #     {
+      #       "fn": "operator()",
+      #       "file": "/data/mci/7946403a5351d044e6cf13da2806ff98/src/src/mongo/transport/service_executor_synchronous.cpp",
+      #       "column": 0,
+      #       "line": 138
+      #     },
+      #     {
+      #       "fn": "std::_Function_handler<void (), mongo::transport::ServiceExecutorSynchronous::schedule(std::function<void ()>, mongo::transport::ServiceExecutor::ScheduleFlags, mongo::transport::ServiceExecutorTaskName)::'lambda'()>::_M_invoke(std::_Any_data const&)",
+      #       "file": "/opt/mongodbtoolchain/v2/include/c++/5.4.0/functional",
+      #       "column": 0,
+      #       "line": 1871
+      #     }
+      #   ]
+      # },
 
     ssResponse = SymbolizeStackResponse(
         buildInfo, list(map(lambda stackFrame: gitUrl(buildInfo, stackFrame.strip()), stackFrames)))
 
     return ssResponse.tojson()
+
+if __name__ == '__main__':
+    # Enable testing from the command line
+    import sys
+    with open(sys.argv[1], 'r') as f:
+        logs = f.readlines()
+    symbolizeStackRequestImpl('\n'.join(logs))
