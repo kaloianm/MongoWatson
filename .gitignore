@@ -6,4 +6,4 @@ node_modules/
 
 # Python specific ignores
 *.pyc
-env/
+venv/

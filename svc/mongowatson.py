@@ -10,6 +10,9 @@ import sys
 if (sys.version_info[0] < 3):
     raise Exception("Must be using Python 3")
 
+import site
+site.addsitedir('svc/triage-scripts/mongosymb')
+
 from flask import Flask, request
 from flask_cors import CORS
 

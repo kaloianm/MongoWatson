@@ -1,10 +1,6 @@
 # Common constants used throughout the service
 
-import symbolscache, sys, urllib3
-
-# Ensure that mongosymb is on the expected path
-sys.path.append('triage-scripts/mongosymb')
-import symbolize
+import symbolize, symbolscache, sys, urllib3
 
 DOWNLOADS_URL_BASE = 'http://downloads.mongodb.org/'
 LIST_BUILDS_URL_BASE = 'http://www.mongodb.org/dl/'
