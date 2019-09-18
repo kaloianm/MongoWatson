@@ -1,0 +1,11 @@
+#!/usr/bin/env python3
+
+import hashlib
+import hmac
+import sys
+
+secret = b'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+body = sys.argv[1].encode('utf-8')
+hash = hmac.new(secret, body, hashlib.sha256)
+print(hash.hexdigest())
+

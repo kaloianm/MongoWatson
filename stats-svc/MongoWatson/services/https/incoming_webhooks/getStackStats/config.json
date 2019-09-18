@@ -1,0 +1,12 @@
+{
+    "name": "getStackStats",
+    "run_as_authed_user": false,
+    "run_as_user_id": "",
+    "run_as_user_id_script_source": "",
+    "options": {
+        "httpMethod": "POST",
+        "secret": "IFavy4lnwIUhwIFavy4lnwIUhwIFavy4lnwIUhw",
+        "validationMethod": "VERIFY_PAYLOAD"
+    },
+    "respond_result": true
+}
