@@ -31,6 +31,11 @@ def gitUrl(githash, stackLine):
     }
 
 
+# Object, which deserializes a request of json type with the following content:
+#
+# {
+#   stack: (string or json)
+# }
 class SymbolizeStackRequest:
     def __init__(self, request):
         if isinstance(request['stack'], str):
@@ -39,30 +44,30 @@ class SymbolizeStackRequest:
             self.stack = request['stack']
 
 
-# Object which serializes itself to json with the following content:
+# Object, which serializes itself to json with the following content:
 #
 # {
-#  "buildInfo": {
-#    "buildId": "6cc0db94b5f0b88048bd857b35f6d91747e14577",
-#    "edition": "community",
-#    "githash": "22ec9e93b40c85fc7cae7d56e7d6a02fd811088c",
-#    "uname": {
-#      "machine": "x86_64",
-#      "release": "3.10.0-327.el7.x86_64",
-#      "sysname": "Linux",
-#      "version": "#1 SMP Thu Nov 19 22:10:57 UTC 2015"
+#   buildInfo: {
+#     buildId: "6cc0db94b5f0b88048bd857b35f6d91747e14577",
+#     edition: "community",
+#     githash: "22ec9e93b40c85fc7cae7d56e7d6a02fd811088c",
+#     uname: {
+#       machine: "x86_64",
+#       release: "3.10.0-327.el7.x86_64",
+#       sysname: "Linux",
+#       version: "#1 SMP Thu Nov 19 22:10:57 UTC 2015"
 #    },
-#    "version": "3.2.9"
+#    version: "3.2.9"
 #  },
-#  "stackFrames": [
+#  stackFrames: [
 #    {
-#      "fn": "mongo::printStackTrace(std::ostream&)",
-#      "url": "https://github.com/mongodb/mongo/tree/22ec9e93b40c85fc7cae7d56e7d6a02fd811088c/src/mongo/util/stacktrace_posix.cpp#L171"
+#      fn: "mongo::printStackTrace(std::ostream&)",
+#      url: "https://github.com/mongodb/mongo/tree/22ec9e93b40c85fc7cae7d56e7d6a02fd811088c/src/mongo/util/stacktrace_posix.cpp#L171"
 #    },
 #       ....
 #    {
-#      "fn": "??",
-#      "url": null
+#      fn: "??",
+#      url: null
 #    }
 #  ]
 # }
@@ -73,6 +78,21 @@ class SymbolizeStackResponse:
 
     def tojson(self):
         return jsonify(buildInfo=self.buildInfo, stackFrames=self.stackFrames)
+
+
+# Object, which serializes itself to the json format expected by the 'stats' service:
+#
+# {
+#   stackFrames: [ (string function name), ... ],
+#   rawinput: (string representation of the stack the customer pasted)
+# }
+class StatsServiceRequest:
+    def __init__(self, stackFrames, rawinput):
+        self.stackFrames = stackFrames
+        self.rawinput = rawinput
+
+    def tojson(self):
+        return jsonify(stackFrames=self.stackFrames, rawinput=self.rawinput)
 
 
 def symbolizeStackRequestImpl(request):
