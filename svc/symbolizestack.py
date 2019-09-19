@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import common, json, re, symbolize
+import common, hashlib, hmac, json, re, symbolize, urllib
 
 from flask import jsonify
 from werkzeug.exceptions import BadRequest
@@ -104,10 +104,25 @@ def symbolizeStackRequestImpl(request):
     build_info, symbolized_stacktrace = symbolize.symbolize_backtrace_from_logs(
         json.dumps(ssRequest.stack), json_format=True)
 
-    ssResponse = SymbolizeStackResponse(
-        build_info,
-        list(
-            map(lambda stackFrame: gitUrl(build_info['githash'], stackFrame),
-                json.loads(symbolized_stacktrace))))
+    stackFrames = list(
+        map(lambda stackFrame: gitUrl(build_info['githash'], stackFrame),
+            json.loads(symbolized_stacktrace)))
+
+    ssResponse = SymbolizeStackResponse(build_info, stackFrames)
+
+    # Call into the Stats service
+    statsSvcRequest = StatsServiceRequest(stackFrames, json.dumps(ssRequest.stack))
+    statsSvcRequestJson = statsSvcRequest.tojson()
+    hash = hmac.new(
+        common.getPassword('STATS_SVC_CREDENTIAL').encode('utf-8'), statsSvcRequestJson.data,
+        hashlib.sha256)
+    statsSvcResponse = common.gHttpService.urlopen(
+        'POST',
+        'https://us-east-1.aws.webhooks.mongodb-stitch.com/api/client/v2.0/app/mongowatson-fvkop/service/https/incoming_webhook/getStackStats',
+        headers={
+            'Content-Type': 'application/json',
+            'X-Hook-Signature': 'sha256=' + hash.hexdigest(),
+        }, body=statsSvcRequestJson.data)
+    print(statsSvcResponse.data)
 
     return ssResponse.tojson()
