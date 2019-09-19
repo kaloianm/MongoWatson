@@ -7,6 +7,12 @@ python -m pip install -r svc/requirements.txt
 python -m pip install -r svc/triage-scripts/mongosymb/requirements.txt
 ```
 
+## Use keyring in order to set-up the required credentials
+**Stats service secret (STATS_SVC_CREDENTIAL):**
+```
+keyring set MongoWatson STATS_SVC_CREDENTIAL
+```
+
 ## Starting the backend service
 ```
 python svc/mongowatson.py
@@ -19,4 +25,4 @@ npm install
 npm start
 ```
 
-Then open the browser and point it to [http://localhost:3000](http://localhost:3000).
+Finally, open the browser and point it to [http://localhost:3000](http://localhost:3000).
