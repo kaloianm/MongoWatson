@@ -4,23 +4,40 @@ import axios from 'axios';
 
 const axiosInstance = axios.create({ baseURL: 'http://127.0.0.1:5000/', timeout: 30000 });
 
+/**
+ * Renders a table with the stack frames specified in the 'stackFrames' property.
+ */
 class StackFrames extends React.Component {
+  constructor(props) {
+    super(props);
+
+    this.resolvedStackRef = React.createRef();
+  }
+
   render() {
     const stackFrames = this.props.stackFrames;
+    var stackFrameNumber = 0;
 
     return (
-      <div align='left'>
+      <div align='left' ref={this.resolvedStackRef}>
         <table>
           {stackFrames.map(function (frame) {
             return (
               <tr>
-                <a href={frame.url} target="_blank">{frame.fn}</a>
+                <td align='right'>
+                  {(stackFrameNumber++) + ':'}
+                </td>
+                <td nowrap>
+                  <a href={frame.url} target='_blank' rel='noopener noreferrer'>{frame.fn}</a>
+                </td>
               </tr>
             );
           })}
         </table>
       </div>);
   }
+
+  scrollToMyRef = () => window.scrollTo(0, this.resolvedStackRef.current.offsetTop)
 }
 
 class StackInputComponent extends React.Component {
@@ -63,9 +80,6 @@ class StackInputComponent extends React.Component {
       <div>
         <form onSubmit={self.handleSubmit}>
           <div>
-            <label>
-              Stack:
-            </label>
             <div>
               <textarea rows={28} cols={100} value={state.value} onChange={self.handleChange} />
             </div>
@@ -94,9 +108,17 @@ function App() {
       <link rel="stylesheet" href="https://gist-it.appspot.com/assets/prettify/prettify.css" />
 
       <header className="App-header">
-        <p>
-          <StackInputComponent id="stack" />
-        </p>
+        <div>
+          <img src="doctor.png" alt="doctor" width="100px" />
+        </div>
+        <div>
+          <label>
+            Stack:
+        </label>
+          <p>
+            <StackInputComponent id="stack" />
+          </p>
+        </div>
       </header>
     </div>
   );
