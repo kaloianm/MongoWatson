@@ -20,9 +20,8 @@ python svc/mongowatson.py
 
 ## Starting the frontend service
 ```
-cd ui/
-npm install
-npm start
+npm install --prefix ui/
+npm start --prefix ui/
 ```
 
 Finally, open the browser and point it to [http://localhost:3000](http://localhost:3000).

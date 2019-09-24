@@ -2,11 +2,13 @@
 
 import common, hashlib, hmac, json, re, symbolize, urllib
 
+from bson import json_util
 from flask import jsonify
 from werkzeug.exceptions import BadRequest
 
-sourcePathRegex = r'/data/mci/(?P<buildId>\w+)/src/(?P<sourcePath>[\w\W]+)'
+kSourcePathRegex = r'/data/mci/(?P<buildId>\w+)/src/(?P<sourcePath>[\w\W]+)'
 kGithubUrl = 'https://github.com/mongodb/mongo/blob/{}/{}#L{}'
+kStatsServiceUrl = 'https://us-east-1.aws.webhooks.mongodb-stitch.com/api/client/v2.0/app/mongowatson-fvkop/service/https/incoming_webhook/{}'
 
 
 # Expects 'stackLine' to be json with the following fielts:
@@ -21,7 +23,7 @@ kGithubUrl = 'https://github.com/mongodb/mongo/blob/{}/{}#L{}'
 #
 def gitUrl(githash, stackLine):
     symbol_info = stackLine['symbinfo'][0]
-    match = re.match(sourcePathRegex, symbol_info['file'])
+    match = re.match(kSourcePathRegex, symbol_info['file'])
 
     return {
         'fn':
@@ -72,12 +74,14 @@ class SymbolizeStackRequest:
 #  ]
 # }
 class SymbolizeStackResponse:
-    def __init__(self, buildInfo, stackFrames):
+    def __init__(self, buildInfo, stackFrames, occurrences):
         self.buildInfo = buildInfo
         self.stackFrames = stackFrames
+        self.occurrences = occurrences
 
     def tojson(self):
-        return jsonify(buildInfo=self.buildInfo, stackFrames=self.stackFrames)
+        return jsonify(buildInfo=self.buildInfo, stackFrames=self.stackFrames,
+                       occurrences=self.occurrences)
 
 
 # Object, which serializes itself to the json format expected by the 'stats' service:
@@ -108,8 +112,6 @@ def symbolizeStackRequestImpl(request):
         map(lambda stackFrame: gitUrl(build_info['githash'], stackFrame),
             json.loads(symbolized_stacktrace)))
 
-    ssResponse = SymbolizeStackResponse(build_info, stackFrames)
-
     # Call into the Stats service
     statsSvcRequest = StatsServiceRequest(stackFrames, json.dumps(ssRequest.stack))
     statsSvcRequestJson = statsSvcRequest.tojson()
@@ -117,12 +119,13 @@ def symbolizeStackRequestImpl(request):
         common.getPassword('STATS_SVC_CREDENTIAL').encode('utf-8'), statsSvcRequestJson.data,
         hashlib.sha256)
     statsSvcResponse = common.gHttpService.urlopen(
-        'POST',
-        'https://us-east-1.aws.webhooks.mongodb-stitch.com/api/client/v2.0/app/mongowatson-fvkop/service/https/incoming_webhook/getStackStats',
-        headers={
+        'POST', kStatsServiceUrl.format('getStackStats'), headers={
             'Content-Type': 'application/json',
             'X-Hook-Signature': 'sha256=' + hash.hexdigest(),
         }, body=statsSvcRequestJson.data)
-    print(statsSvcResponse.data)
+    statsSvcResponseJson = json_util.loads(statsSvcResponse.data)
 
+    # Construct the response
+    ssResponse = SymbolizeStackResponse(build_info, stackFrames,
+                                        statsSvcResponseJson['occurrences'])
     return ssResponse.tojson()

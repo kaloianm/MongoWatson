@@ -91,7 +91,8 @@ class StackInputComponent extends React.Component {
 
         {state.resolvedStack ? (
           <div>
-            <h1>Resolved stack for build version: {state.resolvedStack.buildInfo.version}</h1>
+            <h1>Resolved stack for {state.resolvedStack.buildInfo.uname.sysname} {state.resolvedStack.buildInfo.edition} build version {state.resolvedStack.buildInfo.version}</h1>
+            <h2>Seen {state.resolvedStack.occurrences} times so far</h2>
             <StackFrames stackFrames={state.resolvedStack.stackFrames} />
           </div>
         ) : (<div />)}
