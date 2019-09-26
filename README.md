@@ -1,4 +1,9 @@
 # Starting the MongoWatson "platform"
+## Clone the platform and submodules
+```
+git clone --recurse-submodules git@github.com:kaloianm/MongoWatson.git
+```
+
 ## Create a Python3 virtual environment and install the Python backend service's required modules
 ```
 virtualenv --python=python3 venv
