@@ -1,9 +1,10 @@
 import React from 'react';
+
 import StackInput from './components/StackInput'
 
 import './App.css';
 
-function App() {
+function App(props) {
   return (
     <div className="App">
       <script type="text/javascript" src="https://gist-it.appspot.com/assets/prettify/prettify.js"></script>
@@ -19,7 +20,7 @@ function App() {
             Stack:
           </label>
           <p>
-            <StackInput id="stack" />
+            <StackInput id="stack" environment={props.environment} />
           </p>
         </div>
       </header>

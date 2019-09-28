@@ -1,13 +1,12 @@
 import React from 'react';
+
 import StackFrames from './StackFrames';
-
-import axios from 'axios';
-
-const axiosInstance = axios.create({ baseURL: 'http://127.0.0.1:5000/', timeout: 30000 });
 
 export default class StackInput extends React.Component {
   constructor(props) {
     super(props);
+  
+    this.axios = props.environment.axios;
 
     this.state = {
       stack: null,
@@ -26,7 +25,7 @@ export default class StackInput extends React.Component {
     const self = this;
     const state = this.state;
 
-    axiosInstance.post('/symbolizestack', {
+    self.axios.post('/symbolizestack', {
       stack: state.stack,
     }).then(function (response) {
       self.setState({ result: response.data });

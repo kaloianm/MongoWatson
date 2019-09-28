@@ -1,9 +1,5 @@
 import React from 'react';
 
-import axios from 'axios';
-
-const axiosInstance = axios.create({ baseURL: 'http://127.0.0.1:5000/', timeout: 30000 });
-
 class BuildsListState {
   constructor() {
     this.os = null;
@@ -44,6 +40,8 @@ export default class BuildsList extends React.Component {
 
     const self = this;
 
+    this.axios = props.environment.axios;
+
     props.state.registerListener(function () {
       self.setState({ state: 0 });
     });
@@ -56,7 +54,7 @@ export default class BuildsList extends React.Component {
     const state = this.props.state;
     state.setOS(event.target.value);
 
-    axiosInstance.get('/listbuilds', {
+    this.axios.get('/listbuilds', {
       params: { buildOS: state.os }
     }).then(function (response) {
       state.setAvailableBuilds(response.data.split('\n')
