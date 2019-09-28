@@ -41,7 +41,10 @@ def gitUrl(githash, stackLine):
 class SymbolizeStackRequest:
     def __init__(self, request):
         if isinstance(request['stack'], str):
-            self.stack = json.loads(request['stack'])
+            try:
+                self.stack = json.loads(request['stack'])
+            except json.decoder.JSONDecodeError:
+                raise BadRequest('Unable to decode the stack as JSON')
         else:
             self.stack = request['stack']
 

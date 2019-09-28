@@ -1,0 +1,80 @@
+import React from 'react';
+import StackFrames from './StackFrames';
+
+import axios from 'axios';
+
+const axiosInstance = axios.create({ baseURL: 'http://127.0.0.1:5000/', timeout: 30000 });
+
+export default class StackInput extends React.Component {
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      stack: null,
+      resolvedStack: null
+    };
+
+    this.handleChange = this.handleChange.bind(this);
+    this.handleSubmit = this.handleSubmit.bind(this);
+  }
+
+  handleChange(event) {
+    this.setState({ stack: event.target.value });
+  }
+
+  handleSubmit(event) {
+    const self = this;
+    const state = this.state;
+
+    axiosInstance.post('/symbolizestack', {
+      stack: state.stack,
+    }).then(function (response) {
+      self.setState({ result: response.data });
+    }).catch(function (error) {
+      self.setState({ error: error });
+    });
+
+    event.preventDefault();
+  }
+
+  render() {
+    const self = this;
+    const state = this.state;
+
+    return (
+      <div>
+        <form onSubmit={self.handleSubmit}>
+          <div>
+            <div>
+              <textarea rows={28} cols={100} value={state.value} onChange={self.handleChange} />
+            </div>
+            <div>
+              <input type="submit" value="Submit" />
+            </div>
+          </div>
+        </form>
+
+        <div>
+          {(() => {
+            if (state.result) {
+              return (
+                <div>
+                  <h1>Resolved stack for {state.result.buildInfo.uname.sysname} {state.result.buildInfo.edition} build version {state.result.buildInfo.version}</h1>
+                  <h2>Seen {state.result.occurrences} times so far</h2>
+                  <StackFrames stackFrames={state.result.stackFrames} />
+                </div>);
+            } else if (state.error) {
+              return (
+                <div>
+                  Failed to process the stack due to error:
+                  <p>
+                    {JSON.stringify(state.error)}
+                  </p>
+                </div>);
+            }
+          })()}
+        </div>
+      </div>
+    );
+  }
+}
