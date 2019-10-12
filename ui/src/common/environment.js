@@ -5,7 +5,10 @@ import axios from 'axios';
  */
 export default class Environment {
   constructor(publicUrl) {
-    this._axiosInstance = axios.create({ baseURL: 'http://localhost:5000', timeout: 30000 });
+    var url = new URL(publicUrl);
+    url.port = 5000; // The port on which the service is running
+
+    this._axiosInstance = axios.create({ baseURL: url.href, timeout: 30000 });
   }
 
   get axios() {
