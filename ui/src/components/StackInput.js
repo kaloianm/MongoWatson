@@ -5,7 +5,7 @@ import StackFrames from './StackFrames';
 export default class StackInput extends React.Component {
   constructor(props) {
     super(props);
-  
+
     this.axios = props.environment.axios;
 
     this.state = {
@@ -25,12 +25,14 @@ export default class StackInput extends React.Component {
     const self = this;
     const state = this.state;
 
+    self.setState({ loading: true });
+
     self.axios.post('/symbolizestack', {
       stack: state.stack,
     }).then(function (response) {
-      self.setState({ result: response.data });
+      self.setState({ loading: undefined, result: response.data });
     }).catch(function (error) {
-      self.setState({ error: error });
+      self.setState({ loading: undefined, error: error });
     });
 
     event.preventDefault();
@@ -55,7 +57,13 @@ export default class StackInput extends React.Component {
 
         <div>
           {(() => {
-            if (state.result) {
+            if (state.loading) {
+              return (
+                <div>
+                  <h2>Loading stack ...</h2>
+                </div>
+              );
+            } else if (state.result) {
               return (
                 <div>
                   <h1>Resolved stack for {state.result.buildInfo.uname.sysname} {state.result.buildInfo.edition} build version {state.result.buildInfo.version}</h1>
