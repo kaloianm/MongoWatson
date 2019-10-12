@@ -60,7 +60,7 @@ export default class StackInput extends React.Component {
             if (state.loading) {
               return (
                 <div>
-                  <h2>Loading stack ...</h2>
+                  Loading stack ...
                 </div>
               );
             } else if (state.result) {
