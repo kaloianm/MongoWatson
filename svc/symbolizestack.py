@@ -40,13 +40,14 @@ def gitUrl(githash, stackLine):
 # }
 class SymbolizeStackRequest:
     def __init__(self, request):
-        if isinstance(request['stack'], str):
-            try:
-                self.stack = json.loads(request['stack'])
-            except json.decoder.JSONDecodeError:
-                raise BadRequest('Unable to decode the stack as JSON')
+        stack = request['stack']
+        if isinstance(stack, str):
+            self.stack = stack
+        elif isinstance(stack, dict):
+            self.stack = json.dumps(stack)
         else:
-            self.stack = request['stack']
+            raise BadRequest('The stack must be a string or json, but received {}'.format(
+                type(stack)))
 
 
 # Object, which serializes itself to json with the following content:
@@ -106,10 +107,14 @@ def symbolizeStackRequestImpl(request):
     if request.is_json:
         ssRequest = SymbolizeStackRequest(request.get_json())
     else:
-        raise BadRequest('Invalid request content')
+        raise BadRequest('Invalid request content. Must be JSON, but received {}'.format(
+            request.content_type))
 
-    build_info, symbolized_stacktrace = symbolize.symbolize_backtrace_from_logs(
-        json.dumps(ssRequest.stack), json_format=True)
+    try:
+        build_info, symbolized_stacktrace = symbolize.symbolize_backtrace_from_logs(
+            ssRequest.stack, json_format=True)
+    except symbolize.SymbolizerError as e:
+        raise BadRequest('Unable to symbolize stack trace') from e
 
     stackFrames = list(
         map(lambda stackFrame: gitUrl(build_info['githash'], stackFrame),
