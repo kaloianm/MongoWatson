@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import common, hashlib, hmac, json, re, symbolize, urllib
+import common, hashlib, hmac, json, logging, re, symbolize, urllib
 
 from bson import json_util
 from flask import jsonify
@@ -121,19 +121,24 @@ def symbolizeStackRequestImpl(request):
             json.loads(symbolized_stacktrace)))
 
     # Call into the Stats service
-    statsSvcRequest = StatsServiceRequest(stackFrames, json.dumps(ssRequest.stack))
-    statsSvcRequestJson = statsSvcRequest.tojson()
-    hash = hmac.new(
-        common.getPassword('STATS_SVC_CREDENTIAL').encode('utf-8'), statsSvcRequestJson.data,
-        hashlib.sha256)
-    statsSvcResponse = common.gHttpService.urlopen(
-        'POST', kStatsServiceUrl.format('getStackStats'), headers={
-            'Content-Type': 'application/json',
-            'X-Hook-Signature': 'sha256=' + hash.hexdigest(),
-        }, body=statsSvcRequestJson.data)
-    statsSvcResponseJson = json_util.loads(statsSvcResponse.data)
+    numOccurrences = 0
+    statsSvcCredential = common.getPassword('STATS_SVC_CREDENTIAL').encode('utf-8')
+    if statsSvcCredential is not None:
+        statsSvcRequest = StatsServiceRequest(stackFrames, json.dumps(ssRequest.stack))
+        statsSvcRequestJson = statsSvcRequest.tojson()
+
+        hash = hmac.new(statsSvcCredential, statsSvcRequestJson.data, hashlib.sha256)
+        statsSvcResponse = common.gHttpService.urlopen(
+            'POST', kStatsServiceUrl.format('getStackStats'), headers={
+                'Content-Type': 'application/json',
+                'X-Hook-Signature': 'sha256=' + hash.hexdigest(),
+            }, body=statsSvcRequestJson.data)
+
+        statsSvcResponseJson = json_util.loads(statsSvcResponse.data)
+        numOccurrences = statsSvcResponseJson['occurrences']
+    else:
+        logging.error('No credential found for the Stats Service')
 
     # Construct the response
-    ssResponse = SymbolizeStackResponse(build_info, stackFrames,
-                                        statsSvcResponseJson['occurrences'])
+    ssResponse = SymbolizeStackResponse(build_info, stackFrames, numOccurrences)
     return ssResponse.tojson()
