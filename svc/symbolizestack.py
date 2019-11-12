@@ -122,7 +122,13 @@ def symbolizeStackRequestImpl(request):
 
     # Call into the Stats service
     numOccurrences = 0
-    statsSvcCredential = common.getPassword('STATS_SVC_CREDENTIAL').encode('utf-8')
+
+    statsSvcCredential = None
+    try:
+        statsSvcCredential = common.getPassword('STATS_SVC_CREDENTIAL').encode('utf-8')
+    except Exception:
+        logging.error('Unable to fetch the Stats Service credential', exc_info=True)
+
     if statsSvcCredential is not None:
         statsSvcRequest = StatsServiceRequest(stackFrames, json.dumps(ssRequest.stack))
         statsSvcRequestJson = statsSvcRequest.tojson()
